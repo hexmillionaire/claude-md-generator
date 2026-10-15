@@ -96,3 +96,17 @@ test("env grep skips test and fixture trees", () => {
   const r = scan(join(dirname(fileURLToPath(import.meta.url)), ".."));
   assert.deepEqual(r.env, [], "the generator's own repo reads no env vars outside fixtures");
 });
+
+test("never reads real .env files — only example/template env files", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const d = mkdtempSync(join(tmpdir(), "cmg-env-"));
+  writeFileSync(join(d, "package.json"), '{"name":"x"}');
+  writeFileSync(join(d, ".env"), "REAL_SECRET=hunter2\n");
+  writeFileSync(join(d, ".env.local"), "LOCAL_SECRET=hunter2\n");
+  writeFileSync(join(d, ".env.production"), "PROD_SECRET=hunter2\n");
+  writeFileSync(join(d, ".env.example"), "DOCUMENTED=\n");
+  const r = scan(d);
+  assert.deepEqual(r.env.map((e) => e.name), ["DOCUMENTED"]);
+  assert.ok(!JSON.stringify(r).includes("hunter2"));
+});

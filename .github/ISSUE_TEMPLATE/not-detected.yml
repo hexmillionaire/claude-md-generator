@@ -1,0 +1,22 @@
+name: Something wasn't detected (or was wrong)
+description: A library, framework, script or env var the generator missed or got wrong
+labels: [detection]
+body:
+  - type: input
+    id: what
+    attributes:
+      label: What was missed or wrong?
+      placeholder: "e.g. Hono isn't listed under Stack; or DATABASE_URL shows as public"
+    validations:
+      required: true
+  - type: textarea
+    id: json
+    attributes:
+      label: Relevant part of `npx claude-md-generator --json`
+      description: Redact private names and paths. A few lines is plenty.
+      render: json
+  - type: input
+    id: env
+    attributes:
+      label: Version and OS
+      placeholder: "0.1.1, macOS 15, Node 22"

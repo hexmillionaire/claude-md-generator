@@ -1,7 +1,7 @@
 {
   "name": "claude-md-generator",
-  "version": "0.1.0",
-  "description": "Scan any repo and draft a CLAUDE.md your AI coding agent can actually use — stack, commands, layout, env vars, and a scaffold for the invariants only you know.",
+  "version": "0.1.1",
+  "description": "Scan any repo and draft a CLAUDE.md your AI coding agent can actually use \u2014 stack, commands, layout, env vars, and a scaffold for the invariants only you know.",
   "type": "module",
   "bin": {
     "claude-md-generator": "bin/claude-md.js",
@@ -11,13 +11,15 @@
     "bin",
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "llms.txt",
+    "skills"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\"",
+    "test": "node --test test/cli.test.js test/scan.test.js",
     "try": "node bin/claude-md.js --print"
   },
   "keywords": [
@@ -30,7 +32,11 @@
     "codex",
     "copilot",
     "cli",
-    "developer-tools"
+    "developer-tools",
+    "claude-code-skill",
+    "llm",
+    "context-engineering",
+    "project-documentation"
   ],
   "author": "Amado (hexmillionaire)",
   "license": "MIT",

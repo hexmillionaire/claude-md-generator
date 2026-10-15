@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 
 /**
  * Everything the generator knows comes from here. It reads files; it never
@@ -55,6 +55,11 @@ export function scan(dir) {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────
+
+/** Output paths always use forward slashes so CLAUDE.md is identical on Windows. */
+function toPosix(p) {
+  return sep === "/" ? p : p.split(sep).join("/");
+}
 
 function readJson(p) {
   try {
@@ -536,7 +541,7 @@ function scanEnv(dir) {
         } catch {
           continue;
         }
-        for (const m of t.matchAll(re)) add(m[1], relative(dir, fp), null);
+        for (const m of t.matchAll(re)) add(m[1], toPosix(relative(dir, fp)), null);
       }
     }
   };

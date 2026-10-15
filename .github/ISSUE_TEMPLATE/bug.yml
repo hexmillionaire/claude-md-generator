@@ -1,0 +1,22 @@
+name: Bug
+description: It crashed, wrote the wrong file, or did something it shouldn't
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Include the exact command.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Terminal output
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Version, OS and Node version
+    validations:
+      required: true

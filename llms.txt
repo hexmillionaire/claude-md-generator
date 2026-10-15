@@ -1,0 +1,24 @@
+# claude-md-generator
+
+> Zero-dependency Node CLI that scans a repository and drafts a CLAUDE.md (the instructions file coding agents read every session): stack, commands, layout, env vars and conventions filled in from the repo; invariants and "where things go" scaffolded as TODOs for the author.
+
+Run in any repo, no install: `npx claude-md-generator`. Node 18+. Reads files only — never executes project code, never uses the network. Never overwrites an existing CLAUDE.md (writes CLAUDE.generated.md instead unless `--force`).
+
+## Usage
+
+- `npx claude-md-generator` — write ./CLAUDE.md
+- `npx claude-md-generator <dir>` — scan another directory
+- `npx claude-md-generator --print` — stdout only
+- `npx claude-md-generator --json` — the raw scan result
+- `npx claude-md-generator --agents` — also write AGENTS.md pointing at CLAUDE.md
+- `npx claude-md-generator --force` / `--out <file>`
+
+## Detects
+
+TypeScript, JavaScript, Python, Go, Rust; 20+ frameworks (Next.js, Vite, Expo, SvelteKit, Astro, NestJS, FastAPI, Django…); ~80 libraries (Convex, Prisma, Supabase, Clerk, Stripe, Tailwind, shadcn/ui, TanStack Query, Zod, Anthropic/OpenAI SDKs, viem…); env vars from .env.example and from process.env / import.meta.env / os.environ in source; CI and deploy config.
+
+## Docs
+
+- [README](https://github.com/hexmillionaire/claude-md-generator#readme)
+- [Claude Code skill](https://github.com/hexmillionaire/claude-md-generator/blob/main/skills/claude-md/SKILL.md): runs the generator, then fills invariants from git history and asks the user for the rest
+- [Source of detections](https://github.com/hexmillionaire/claude-md-generator/blob/main/src/scan.js)

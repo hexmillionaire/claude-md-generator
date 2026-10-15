@@ -1,5 +1,10 @@
 # claude-md-generator
 
+[![npm](https://img.shields.io/npm/v/claude-md-generator)](https://www.npmjs.com/package/claude-md-generator)
+[![CI](https://github.com/hexmillionaire/claude-md-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/hexmillionaire/claude-md-generator/actions/workflows/ci.yml)
+[![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
+[![license](https://img.shields.io/npm/l/claude-md-generator)](LICENSE)
+
 **Scan any repo and draft a `CLAUDE.md` your AI coding agent can actually use.**
 
 ```bash
@@ -50,6 +55,26 @@ npx claude-md-generator --json     # dump the scan (to see what it detected)
 If `CLAUDE.md` already exists it will not be touched: the draft goes to `CLAUDE.generated.md` so you can merge by hand.
 
 Requires Node 18+.
+
+---
+
+## Let your agent do the rest
+
+The generator fills in the facts. The `claude-md` skill gets an agent to fill in the judgment too: it runs the generator, mines your git history for the fixes that reveal invariants, asks you about the rest, and trims the result.
+
+**Claude Code** — install the skill once, then ask *"write a CLAUDE.md for this repo"*:
+
+```bash
+mkdir -p ~/.claude/skills/claude-md
+curl -fsSL https://raw.githubusercontent.com/hexmillionaire/claude-md-generator/main/skills/claude-md/SKILL.md \
+  -o ~/.claude/skills/claude-md/SKILL.md
+```
+
+**Cursor, Codex, Copilot, anything else** — paste this:
+
+> Run `npx -y claude-md-generator --print`, then follow https://github.com/hexmillionaire/claude-md-generator/blob/main/skills/claude-md/SKILL.md to fill in the invariants and where-things-go sections. Don't overwrite an existing CLAUDE.md; merge into it.
+
+Agents looking for a summary of this tool can read [`llms.txt`](llms.txt).
 
 ---
 
@@ -147,9 +172,14 @@ Missing one you use? Open a PR adding a line to `STACK` in `src/scan.js`. It's a
 
 ---
 
+## Safety
+
+Reads files only: never runs your code, spawns processes or touches the network. Never opens `.env` / `.env.local` — only `.env.example`-style templates, and only variable *names*. See [SECURITY.md](SECURITY.md).
+
 ## Related
 
 - [convex-clerk-starter](https://github.com/hexmillionaire/convex-clerk-starter) — a Next.js + Convex + Clerk starter whose `CLAUDE.md` is the shape this tool produces, with the invariants filled in from production.
+- [Agent Lanes](https://github.com/hexmillionaire/agent-lanes) — keep an agent's task inside its declared file scope, then hand it off.
 
 ## License
 
