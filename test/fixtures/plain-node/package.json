@@ -1,0 +1,1 @@
+{ "name": "tiny-lib", "type": "module", "scripts": { "test": "node --test" }, "devDependencies": {} }

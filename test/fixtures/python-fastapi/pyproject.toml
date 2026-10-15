@@ -1,0 +1,7 @@
+[project]
+name = "orders-api"
+dependencies = ["fastapi>=0.110", "sqlalchemy>=2", "pydantic>=2", "httpx"]
+[tool.ruff]
+line-length = 100
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,45 @@
+{
+  "name": "claude-md-generator",
+  "version": "0.1.0",
+  "description": "Scan any repo and draft a CLAUDE.md your AI coding agent can actually use — stack, commands, layout, env vars, and a scaffold for the invariants only you know.",
+  "type": "module",
+  "bin": {
+    "claude-md-generator": "bin/claude-md.js",
+    "claude-md": "bin/claude-md.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "try": "node bin/claude-md.js --print"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-md",
+    "agents-md",
+    "ai-coding",
+    "cursor",
+    "codex",
+    "copilot",
+    "cli",
+    "developer-tools"
+  ],
+  "author": "Amado (hexmillionaire)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hexmillionaire/claude-md-generator.git"
+  },
+  "homepage": "https://github.com/hexmillionaire/claude-md-generator#readme",
+  "bugs": {
+    "url": "https://github.com/hexmillionaire/claude-md-generator/issues"
+  }
+}
