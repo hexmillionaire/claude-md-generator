@@ -5,10 +5,12 @@
  * answer). The TODOs are the point; the facts are there so the author
  * doesn't have to type the boring half.
  */
+import { cell, flat } from "./text.js";
+
 export function render(r) {
   const out = [];
   const push = (...lines) => out.push(...lines);
-  const code = (s) => `\`${s}\``;
+  const code = (s) => `\`${flat(s, 120)}\``;
   const pm = r.packageManager ?? "npm";
   const runCmd = (script) => {
     if (r.language === "Go" || r.language === "Rust" || r.language === "Python") return r.scripts[script];
@@ -17,10 +19,10 @@ export function render(r) {
   };
 
   // ── Header ─────────────────────────────────────────────────────────────
-  push(`# ${r.name} — agent notes`, ``);
+  push(`# ${flat(r.name, 120)} — agent notes`, ``);
   push(
     r.description
-      ? `${r.description.trim().replace(/\.?$/, ".")}`
+      ? `${flat(r.description, 300).replace(/\.?$/, ".")}`
       : `<!-- TODO: one sentence on what this app does and who it's for. -->`
   );
   push(``);
@@ -87,7 +89,7 @@ export function render(r) {
     ].slice(0, 16);
     push(`| Command | What it does |`, `|---|---|`);
     for (const [k, v] of ordered) {
-      push(`| ${code(runCmd(k))} | ${describeScript(k, v)} |`);
+      push(`| \`${cell(runCmd(k), 120)}\` | ${describeScript(k, v)} |`);
     }
     push(``);
     const checks = ["typecheck", "type-check", "lint", "test", "build"].filter((k) => r.scripts[k] !== undefined);
@@ -127,7 +129,7 @@ export function render(r) {
     for (const e of r.env) {
       const where = e.sources.find((s) => s.startsWith(".env")) ?? `read in ${code(e.sources[0])}`;
       const vis = e.public ? "public (shipped to the browser)" : "server-only";
-      push(`| ${code(e.name)} | ${e.comment ? e.comment + " — " : ""}${vis}; ${where.startsWith("read") ? where : `in ${code(where)}`} |`);
+      push(`| ${code(e.name)} | ${e.comment ? cell(e.comment, 160) + " — " : ""}${vis}; ${where.startsWith("read") ? where : `in ${code(where)}`} |`);
     }
     push(``);
     if (onlyInCode.length && fromExample.length) {
@@ -211,7 +213,7 @@ function groupBy(arr, fn) {
 }
 
 function describeScript(name, cmd) {
-  const c = String(cmd);
+  const c = flat(cmd, 400);
   const known = {
     dev: "Dev server",
     "dev:all": "Dev server plus backend watcher",
@@ -246,7 +248,7 @@ function describeScript(name, cmd) {
   if (/^make /.test(c)) return `Make target`;
   // Fall back to the command itself, shortened.
   const short = c.length > 60 ? c.slice(0, 57) + "…" : c;
-  return `\`${short.replace(/\|/g, "\\|")}\``;
+  return `\`${cell(short, 80)}\``;
 }
 
 function seedInvariants(r) {
