@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { flat, flatList } from "./text.js";
 
 /**
  * Everything the generator knows comes from here. It reads files; it never
@@ -9,8 +10,8 @@ export function scan(dir) {
   const pkg = readJson(join(dir, "package.json"));
   const result = {
     dir,
-    name: pkg?.name ?? basename(dir),
-    description: pkg?.description ?? null,
+    name: flat(pkg?.name, 120) || basename(dir),
+    description: pkg?.description ? flat(pkg.description, 300) : null,
     language: null,
     packageManager: detectPackageManager(dir, pkg),
     monorepo: detectMonorepo(dir, pkg),
@@ -38,7 +39,7 @@ export function scan(dir) {
     Object.assign(result, scanPython(dir));
   } else if (existsSync(join(dir, "go.mod"))) {
     result.language = "Go";
-    result.framework = { name: "Go module", version: firstLine(join(dir, "go.mod")).replace(/^module\s+/, "") };
+    result.framework = { name: "Go module", version: flat(firstLine(join(dir, "go.mod")).replace(/^module\s+/, ""), 120) };
     result.scripts = { build: "go build ./...", test: "go test ./...", vet: "go vet ./..." };
   } else if (existsSync(join(dir, "Cargo.toml"))) {
     result.language = "Rust";
@@ -68,11 +69,23 @@ function readJson(p) {
     return null;
   }
 }
+/**
+ * Reads at most the first 1 MB of a config file. A planted multi-gigabyte
+ * Makefile or workflow must not stall the scan or exhaust memory, and nothing
+ * the generator looks for lives past the first megabyte.
+ */
+const MAX_TEXT_BYTES = 1024 * 1024;
 function readText(p) {
+  let fd;
   try {
-    return readFileSync(p, "utf8");
+    fd = openSync(p, "r");
+    const buf = Buffer.alloc(MAX_TEXT_BYTES);
+    const n = readSync(fd, buf, 0, MAX_TEXT_BYTES, 0);
+    return buf.toString("utf8", 0, n);
   } catch {
     return "";
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
 }
 function firstLine(p) {
@@ -86,7 +99,7 @@ function major(v) {
   return m ? Number(m[1]) : null;
 }
 function clean(v) {
-  return String(v ?? "").replace(/^[\^~>=<\s]+/, "");
+  return flat(String(v ?? "").replace(/^[\^~>=<\s]+/, ""), 40);
 }
 
 const IGNORE_DIRS = new Set([
@@ -140,7 +153,7 @@ function detectPackageManager(dir, pkg) {
 }
 
 function detectMonorepo(dir, pkg) {
-  if (pkg?.workspaces) return { tool: "npm/yarn workspaces", packages: pkg.workspaces.packages ?? pkg.workspaces };
+  if (pkg?.workspaces) return { tool: "npm/yarn workspaces", packages: flatList(pkg.workspaces.packages ?? pkg.workspaces) };
   if (existsSync(join(dir, "pnpm-workspace.yaml"))) return { tool: "pnpm workspaces", packages: [] };
   if (existsSync(join(dir, "turbo.json"))) return { tool: "Turborepo", packages: [] };
   if (existsSync(join(dir, "nx.json"))) return { tool: "Nx", packages: [] };
@@ -331,8 +344,8 @@ function detectTests(deps, scripts) {
     ["mocha", "Mocha"],
     ["ava", "AVA"],
   ];
-  for (const [key, name] of runners) if (deps[key]) return { runner: name, script: scripts.test ?? null };
-  if (scripts.test && !/no test specified/.test(scripts.test)) return { runner: "node --test or custom", script: scripts.test };
+  for (const [key, name] of runners) if (deps[key]) return { runner: name, script: scripts.test ? flat(scripts.test, 120) : null };
+  if (scripts.test && !/no test specified/.test(scripts.test)) return { runner: "node --test or custom", script: flat(scripts.test, 120) };
   return null;
 }
 
@@ -346,7 +359,7 @@ function detectJsConventions(dir, pkg, deps) {
       "Path aliases: " +
         Object.entries(paths)
           .slice(0, 4)
-          .map(([k, v]) => `\`${k}\` → \`${Array.isArray(v) ? v[0] : v}\``)
+          .map(([k, v]) => `\`${flat(k, 60)}\` → \`${flat(Array.isArray(v) ? v[0] : v, 80)}\``)
           .join(", ") +
         "."
     );
@@ -360,8 +373,8 @@ function detectJsConventions(dir, pkg, deps) {
   if (pkg.type === "module") c.push("Package is ESM (`\"type\": \"module\"`): use `import`, not `require`.");
   if (existsSync(join(dir, "components.json"))) {
     const cj = readJson(join(dir, "components.json"));
-    const style = cj?.style ? ` (style: \`${cj.style}\`)` : "";
-    c.push(`shadcn/ui components live in \`${cj?.aliases?.ui ?? "components/ui"}\`${style}; add new ones with \`npx shadcn@latest add <name>\` rather than writing them by hand.`);
+    const style = cj?.style ? ` (style: \`${flat(cj.style, 40)}\`)` : "";
+    c.push(`shadcn/ui components live in \`${flat(cj?.aliases?.ui, 80) || "components/ui"}\`${style}; add new ones with \`npx shadcn@latest add <name>\` rather than writing them by hand.`);
   }
   return c;
 }
@@ -477,7 +490,7 @@ function scanEnv(dir) {
     if (!name || /^(NODE_ENV|PATH|HOME|PWD|CI)$/.test(name)) return;
     const cur = names.get(name) ?? { name, sources: new Set(), comment: null, public: /^(NEXT_PUBLIC_|VITE_|EXPO_PUBLIC_|PUBLIC_|REACT_APP_|NUXT_PUBLIC_)/.test(name) };
     cur.sources.add(source);
-    if (comment && !cur.comment) cur.comment = comment;
+    if (comment && !cur.comment) cur.comment = flat(comment, 160);
     names.set(name, cur);
   };
 
@@ -558,8 +571,8 @@ function scanCi(dir) {
   if (existsSync(gh)) {
     for (const f of readdirSync(gh).filter((n) => /\.ya?ml$/.test(n))) {
       const t = readText(join(gh, f));
-      const name = (t.match(/^name:\s*(.+)$/m) ?? [])[1]?.trim();
-      out.push({ file: `.github/workflows/${f}`, name: name ?? f });
+      const name = flat((t.match(/^name:\s*(.+)$/m) ?? [])[1], 80);
+      out.push({ file: `.github/workflows/${f}`, name: name || f });
     }
   }
   if (existsSync(join(dir, "vercel.json"))) out.push({ file: "vercel.json", name: "Vercel config" });

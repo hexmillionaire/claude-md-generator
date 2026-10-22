@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { existsSync, readFileSync, writeFileSync, lstatSync, renameSync, rmSync } from "node:fs";
+import { resolve, join, dirname, basename } from "node:path";
 import { scan } from "./scan.js";
 import { render } from "./render.js";
 
@@ -65,9 +65,12 @@ export async function run(argv) {
   }
 
   const outPath = resolve(dir, opts.out ?? "CLAUDE.md");
-  if (existsSync(outPath) && !opts.force) {
+  const outState = pathState(outPath);
+  if (outState === "symlink") throw new Error(`refusing to write ${outPath}: it is a symbolic link`);
+  if (outState === "other") throw new Error(`refusing to write ${outPath}: not a regular file`);
+  if (outState === "file" && !opts.force) {
     const alt = resolve(dir, "CLAUDE.generated.md");
-    writeFileSync(alt, md);
+    writeFile(alt, md, { overwrite: true });
     console.error(
       `${rel(dir, outPath)} already exists. Wrote ${rel(dir, alt)} instead.\n` +
         `Merge what's useful, or re-run with --force to overwrite.`
@@ -75,13 +78,13 @@ export async function run(argv) {
     return 0;
   }
 
-  writeFileSync(outPath, md);
+  writeFile(outPath, md, { overwrite: opts.force });
   console.error(`Wrote ${rel(dir, outPath)}`);
 
   if (opts.agents) {
     const agentsPath = join(dir, "AGENTS.md");
-    if (!existsSync(agentsPath) || opts.force) {
-      writeFileSync(agentsPath, agentsPointer(result));
+    if (pathState(agentsPath) === "missing" || opts.force) {
+      writeFile(agentsPath, agentsPointer(result), { overwrite: opts.force });
       console.error(`Wrote AGENTS.md`);
     } else {
       console.error(`AGENTS.md already exists, left alone.`);
@@ -100,6 +103,53 @@ export async function run(argv) {
 
 function rel(dir, p) {
   return p.startsWith(dir) ? p.slice(dir.length + 1) : p;
+}
+
+/**
+ * What is at `p` without following symlinks: "missing", "file", "symlink"
+ * or "other" (directory, socket, ...). `existsSync` is the wrong tool here:
+ * it follows links, so a dangling symlink looks like free space.
+ */
+export function pathState(p) {
+  let st;
+  try {
+    st = lstatSync(p);
+  } catch (err) {
+    if (err?.code === "ENOENT") return "missing";
+    throw err;
+  }
+  if (st.isSymbolicLink()) return "symlink";
+  if (st.isFile()) return "file";
+  return "other";
+}
+
+/**
+ * Write `content` to `p` without ever writing *through* the path. The scanned
+ * repository is untrusted and git preserves symlinks on clone, so a planted
+ * `CLAUDE.md -> ~/.zshrc` must not turn this tool into an arbitrary-file
+ * writer. Rules: a symlink or non-regular file at `p` is refused outright;
+ * a missing path is created exclusively (`wx`, which does not follow links);
+ * an existing regular file is replaced only with `overwrite`, via a sibling
+ * temp file and an atomic rename, so a race can at most swap the path, never
+ * redirect the write.
+ */
+export function writeFile(p, content, { overwrite = false } = {}) {
+  const state = pathState(p);
+  if (state === "symlink") throw new Error(`refusing to write ${p}: it is a symbolic link`);
+  if (state === "other") throw new Error(`refusing to write ${p}: not a regular file`);
+  if (state === "missing") {
+    writeFileSync(p, content, { flag: "wx" });
+    return;
+  }
+  if (!overwrite) throw new Error(`refusing to overwrite ${p} without --force`);
+  const tmp = join(dirname(p), `.${basename(p)}.${process.pid}.${Date.now().toString(36)}.tmp`);
+  writeFileSync(tmp, content, { flag: "wx" });
+  try {
+    renameSync(tmp, p);
+  } catch (err) {
+    rmSync(tmp, { force: true });
+    throw err;
+  }
 }
 
 function agentsPointer(result) {
