@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { flat, flatList } from "./text.js";
 
@@ -69,11 +69,23 @@ function readJson(p) {
     return null;
   }
 }
+/**
+ * Reads at most the first 1 MB of a config file. A planted multi-gigabyte
+ * Makefile or workflow must not stall the scan or exhaust memory, and nothing
+ * the generator looks for lives past the first megabyte.
+ */
+const MAX_TEXT_BYTES = 1024 * 1024;
 function readText(p) {
+  let fd;
   try {
-    return readFileSync(p, "utf8");
+    fd = openSync(p, "r");
+    const buf = Buffer.alloc(MAX_TEXT_BYTES);
+    const n = readSync(fd, buf, 0, MAX_TEXT_BYTES, 0);
+    return buf.toString("utf8", 0, n);
   } catch {
     return "";
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
 }
 function firstLine(p) {

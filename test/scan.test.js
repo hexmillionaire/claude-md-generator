@@ -99,6 +99,22 @@ test("env grep skips test and fixture trees", () => {
   assert.deepEqual(r.env, [], "the generator's own repo reads no env vars outside fixtures");
 });
 
+test("config files are read at most 1 MB deep, so a huge file cannot stall the scan", () => {
+  const dir = mkdtempSync(join(tmpdir(), "claude-md-big-"));
+  mkdirSync(join(dir, ".github", "workflows"), { recursive: true });
+  const padding = "# filler\n".repeat(200_000); // ~1.8 MB
+  writeFileSync(join(dir, ".github", "workflows", "ci.yml"), padding + "name: Hidden\n");
+  writeFileSync(join(dir, "pyproject.toml"), "[project]\nname = \"big\"\n");
+  writeFileSync(join(dir, "Makefile"), "build:\n\techo ok\n" + padding + "secret-target:\n\techo late\n");
+  const started = Date.now();
+  const r = scan(dir);
+  assert.ok(Date.now() - started < 5000, "scan stays fast on oversized files");
+  // Only the first megabyte is read: the late `name:` and late target are not seen.
+  assert.deepEqual(r.ci, [{ file: ".github/workflows/ci.yml", name: "ci.yml" }]);
+  assert.equal(r.scripts.build, "make build");
+  assert.equal(r.scripts["secret-target"], undefined);
+});
+
 test("never reads real .env files — only example/template env files", async () => {
   const { mkdtempSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
