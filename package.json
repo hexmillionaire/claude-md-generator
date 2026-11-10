@@ -1,6 +1,6 @@
 {
   "name": "claude-md-generator",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Scan any repo and draft a CLAUDE.md your AI coding agent can actually use \u2014 stack, commands, layout, env vars, and a scaffold for the invariants only you know.",
   "type": "module",
   "bin": {

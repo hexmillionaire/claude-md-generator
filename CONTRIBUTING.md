@@ -21,3 +21,16 @@ npm test              # Node 18+; CI also runs 20, 22, 24, Windows and macOS
 npm run try           # generate this repo's CLAUDE.md to stdout
 node bin/claude-md.js ../some-repo --json
 ```
+
+## Releasing
+
+Releases are published by `.github/workflows/publish.yml`, never from a laptop.
+
+1. In a PR, bump `version` in `package.json` and rename `## Unreleased` in `CHANGELOG.md` to `## <version> — <date>`. Merge it.
+2. Tag the merge commit on `main` and push the tag:
+
+   ```bash
+   git tag v<version> origin/main && git push origin v<version>
+   ```
+
+The workflow refuses a tag that does not match `package.json`, has no changelog section, or is not on `main`. It runs the tests, then publishes with npm trusted publishing (GitHub OIDC, no stored token) and a provenance attestation.
